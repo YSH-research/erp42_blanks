@@ -42,7 +42,7 @@ class SCANParser:
 
             angle = np.arctan2(point[1], point[0])
 
-            if point[0] > 0 and point[2] > -1.3 and dist < 50:
+            if point[0] > 0 and point[2] > -0.65 and dist < 50:
                 point_list.append((point[0], point[1], point[2], point[3], dist, angle))
 
         point_np = np.array(point_list, np.float32)
