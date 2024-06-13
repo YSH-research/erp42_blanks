@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import rospy
 import rospkg
@@ -69,7 +69,7 @@ if __name__ == '__main__' :
         local_path_pub = rospy.Publisher('/local_path', Path, queue_size=1)
         tl=turtle_listener()
         # 전역 경로 로드
-        p_r=pathReader("beginner_tutorials")
+        p_r=pathReader("erp42")
         global_path = p_r.read_txt("turtle_path.txt")
 
         rate=rospy.Rate(30)
@@ -82,3 +82,4 @@ if __name__ == '__main__' :
 
     except rospy.ROSInterruptException:
         pass
+

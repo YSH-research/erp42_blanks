@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import rospy
@@ -72,6 +72,7 @@ class dijkstra_path_pub :
             # wait for the first input
             while True:
                 if self.is_goal_pose == True and self.is_init_pose == True:
+                    print(1)
                     break
                 else:
                     rospy.loginfo('Waiting goal pose data')

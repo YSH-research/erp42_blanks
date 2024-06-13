@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
  
 import rospy
 import cv2
@@ -23,27 +23,36 @@ simplefilter("ignore", category=ConvergenceWarning)
 
 
 class IMGParser:
-    def __init__(self):
+    def __init__(self, params_cam):
         self.image_sub = rospy.Subscriber("/image_jpeg/compressed", CompressedImage, self.callback)
         self.is_image = False
         self.img_bgr = None
         self.img_lane = None
         self.edges = None
+        #####################################################################
+        self.lower_wlane = np.array([0,0,0])                                     
+        self.upper_wlane = np.array([0,0,0])                                   
+                                                                            
+        self.lower_ylane = np.array([0,0,0])                                    
+        self.upper_ylane = np.array([0,0,0])                           
 
-        self.lower_wlane = np.array([0,0,0])
-        self.upper_wlane = np.array([0,0,0])
+        width = params_cam["WIDTH"]
+        height = params_cam["HEIGHT"]                                                                      
+        self.crop_pts = np.array([[width * 0, height * 0.],
+                                  [width * (0.5 - 0), height * 0],
+                                  [width * (0.5 + 0), height * 0],
+                                  [width * (1 - 0), height * 0]
+                                 ], dtype=np.int32)
 
-        self.lower_ylane = np.array([0,0,0])
-        self.upper_ylane = np.array([0,0,0])
-
-        self.crop_pts = np.array([[[0,0],[0,0],[0,0],[0,0]]])
-        
         if np.sum(self.lower_wlane) == 0 or np.sum(self.upper_wlane) == 0 or \
         np.sum(self.lower_ylane) == 0 or np.sum(self.upper_ylane) == 0 or \
         np.sum(self.crop_pts) == 0:
-            print("you need to find the right value : check lines at 33 ~ 39")
+            print("you need to find the right value : check lines at 33 ~ 45")
             exit()
-    
+
+        #####################################################################
+        
+
 
     def callback(self, msg):
         self.is_image = True
@@ -74,7 +83,7 @@ class IMGParser:
             mask = np.zeros((h, w, c), dtype=np.uint8)
             mask_value = (255)
 
-        cv2.fillPoly(mask, self.crop_pts, mask_value)
+        cv2.fillPoly(mask, [self.crop_pts], mask_value)
         mask = cv2.bitwise_and(mask, img)
 
         return mask
@@ -170,7 +179,7 @@ class BEVTransform:
 
             self.fc_y = self.fc_x
             
-        self.h = params_cam["Z"] + 0.34
+        self.h = params_cam["Z"]
 
         self.n = float(params_cam["WIDTH"])
         self.m = float(params_cam["HEIGHT"])
@@ -327,15 +336,15 @@ class CURVEFit:
 
         self.lane_path = Path()
 
-        self.ransac_left = linear_model.RANSACRegressor(base_estimator=linear_model.Lasso(alpha=alpha),
+        self.ransac_left = linear_model.RANSACRegressor(estimator=linear_model.Lasso(alpha=alpha),
                                                         max_trials=self.max_trials,
-                                                        loss='absolute_loss',
+                                                        loss='absolute_error',
                                                         min_samples=self.min_pts,
                                                         residual_threshold=self.y_margin)
 
-        self.ransac_right = linear_model.RANSACRegressor(base_estimator=linear_model.Lasso(alpha=alpha),
+        self.ransac_right = linear_model.RANSACRegressor(estimator=linear_model.Lasso(alpha=alpha),
                                                         max_trials=5,
-                                                        loss='absolute_loss',
+                                                        loss='absolute_error',
                                                         min_samples=self.min_pts,
                                                         residual_threshold=self.y_margin)
         
@@ -501,7 +510,7 @@ if __name__ == '__main__':
 
     rospy.init_node('lane_fitting', anonymous=True)
 
-    image_parser = IMGParser()
+    image_parser = IMGParser(params_cam)
     bev_op = BEVTransform(params_cam=params_cam)
     curve_learner = CURVEFit(order=3, lane_width=3.5 ,y_margin=1, x_range=30, min_pts=50)
 
@@ -535,9 +544,10 @@ if __name__ == '__main__':
                                                 xyr[:, 0].astype(np.int32),
                                                 xyr[:, 1].astype(np.int32))
 
-            cv2.imshow("birdview", img_lane_fit)
-            cv2.imshow("img_warp", img_warp)
-            cv2.imshow("origin_img", image_parser.img_bgr)
+            img_concat = np.concatenate([image_parser.img_bgr, img_warp, img_lane_fit], axis=1)
+            cv2.imshow("origin_img > img_warp > birdview", img_concat)
+            cv2.waitKey(1)
+            print(f"Caemra sensor was connected !")
             cv2.waitKey(1)
             print(f"Caemra sensor was connected !")
 
